@@ -1,0 +1,21 @@
+{
+  "name": "aselpay-notification-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Relays push notifications from the AselPay backend to the Expo Push Service.",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "dev": "node --watch index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "nodemon": "^3.1.14"
+  }
+}
