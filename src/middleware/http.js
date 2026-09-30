@@ -6,7 +6,7 @@ const requestLogger = (logger) => (req, res, next) => {
     const context = {
       status: res.statusCode,
       ms: Date.now() - started,
-      ip: req.socket.remoteAddress,
+      ip: req.ip || req.socket.remoteAddress,
     };
     const line = `${req.method} ${req.originalUrl}`;
     if (res.statusCode >= 500) logger.error(line, context);

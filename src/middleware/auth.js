@@ -20,11 +20,13 @@ const requireApiKey = (apiKey) => {
 const normalizeIp = (ip) => String(ip || "").replace(/^::ffff:/, "");
 
 // Optional allow-list of client IPs; empty list = no restriction.
+// req.ip is the real client IP when "trust proxy" is set (X-Forwarded-For),
+// the socket address otherwise.
 const allowIps = (allowedIps) => {
   const allowed = new Set(allowedIps.map(normalizeIp));
   return (req, res, next) => {
     if (allowed.size === 0) return next();
-    const ip = normalizeIp(req.socket.remoteAddress);
+    const ip = normalizeIp(req.ip || req.socket.remoteAddress);
     if (!allowed.has(ip)) {
       return res.status(403).json({ error: "FORBIDDEN" });
     }

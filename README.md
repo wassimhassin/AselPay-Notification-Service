@@ -52,6 +52,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `HOST` | `0.0.0.0` | Interface to listen on |
 | `API_KEY` | — (required, ≥ 32 chars) | Secret expected in the `x-api-key` header |
 | `ALLOWED_IPS` | empty (any) | Comma-separated client IPs allowed on `/v1` (set it to the backend server's IP) |
+| `TRUST_PROXY` | empty | Behind a reverse proxy: the proxy's address (`loopback` if on the same machine), so `ALLOWED_IPS` checks the real client IP from `X-Forwarded-For` |
 | `EXPO_ACCESS_TOKEN` | empty | Only if *Enhanced push security* is enabled on the Expo project |
 | `EXPO_TIMEOUT_MS` | `15000` | Timeout per Expo request |
 | `QUEUE_MAX_SIZE` | `50000` | Max queued messages; beyond it the API answers `503` |
@@ -163,6 +164,19 @@ pm2 logs aselpay-notifications
 
 `--kill-timeout` gives the service time to finish its current batch and save
 the queue on `pm2 restart` / `pm2 stop`.
+
+**Don't run it with nodemon or `--watch` in production.** The service writes
+`data/*.json` while running; a file watcher restarts it on each write and the
+notifications still waiting in memory are lost.
+
+### Behind a reverse proxy
+
+If a proxy (nginx…) exposes the service, e.g.
+`https://aselpay-notification.example.com/api/` → `http://127.0.0.1:9105/`,
+every request reaches the service from `127.0.0.1`. Set `TRUST_PROXY=loopback`
+so `ALLOWED_IPS` is checked against the real client IP, and make sure the
+proxy sends `X-Forwarded-For`. The simplest option remains letting the backend
+call the service directly on the LAN (`http://<ip>:<port>`).
 
 Open `PORT` in the firewall **only for the AselPay backend server's IP**, and
 set the same IP in `ALLOWED_IPS`.

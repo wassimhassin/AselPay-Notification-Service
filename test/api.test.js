@@ -9,7 +9,7 @@ const API_KEY = "k".repeat(40);
 const TOKEN = "ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]";
 
 // Starts the app on a random port with fake dependencies.
-const startApp = async ({ allowedIps = [], queueFull = false } = {}) => {
+const startApp = async ({ allowedIps = [], queueFull = false, trustProxy = null } = {}) => {
   const enqueued = [];
   const invalid = new Map([["ExponentPushToken[dead]", { reason: "DeviceNotRegistered", at: "t" }]]);
   const queue = {
@@ -28,7 +28,7 @@ const startApp = async ({ allowedIps = [], queueFull = false } = {}) => {
     },
   };
   const app = createApp({
-    config: { apiKey: API_KEY, allowedIps, maxTokensPerRequest: 1000 },
+    config: { apiKey: API_KEY, allowedIps, trustProxy, maxTokensPerRequest: 1000 },
     queue,
     receipts: { size: 0 },
     invalidTokens,
@@ -38,10 +38,14 @@ const startApp = async ({ allowedIps = [], queueFull = false } = {}) => {
     const s = app.listen(0, "127.0.0.1", () => resolve(s));
   });
   const base = `http://127.0.0.1:${server.address().port}`;
-  const call = (method, url, body, key = API_KEY) =>
+  const call = (method, url, body, key = API_KEY, extraHeaders = {}) =>
     fetch(base + url, {
       method,
-      headers: { "content-type": "application/json", ...(key ? { "x-api-key": key } : {}) },
+      headers: {
+        "content-type": "application/json",
+        ...(key ? { "x-api-key": key } : {}),
+        ...extraHeaders,
+      },
       body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
     });
   return { call, enqueued, close: () => server.close() };
@@ -71,6 +75,23 @@ test("enforces the IP allow-list", async () => {
   const local = await startApp({ allowedIps: ["127.0.0.1"] });
   assert.equal((await local.call("GET", "/v1/tokens/invalid")).status, 200);
   local.close();
+});
+
+test("behind a proxy, checks the forwarded client IP", async () => {
+  const api = await startApp({ allowedIps: ["172.31.245.86"], trustProxy: "loopback" });
+  const via = (ip) =>
+    api.call("GET", "/v1/tokens/invalid", undefined, API_KEY, { "x-forwarded-for": ip });
+  assert.equal((await via("172.31.245.86")).status, 200);
+  assert.equal((await via("8.8.8.8")).status, 403);
+  api.close();
+});
+
+test("root answers with service info", async () => {
+  const api = await startApp();
+  const res = await api.call("GET", "/", undefined, null);
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).service, "aselpay-notification-service");
+  api.close();
 });
 
 test("queues valid notifications and answers 202", async () => {

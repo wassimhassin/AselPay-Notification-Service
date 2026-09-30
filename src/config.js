@@ -38,6 +38,10 @@ const config = {
   apiKey,
   // Optional: only these client IPs may call the /v1 API (empty = any).
   allowedIps: readList("ALLOWED_IPS"),
+  // Behind a reverse proxy every request comes from the proxy (127.0.0.1).
+  // Set to the proxy's address ("loopback" for a proxy on the same machine)
+  // so the client IP is read from X-Forwarded-For. Empty = no proxy.
+  trustProxy: (process.env.TRUST_PROXY || "").trim() || null,
 
   expo: {
     sendUrl: "https://exp.host/--/api/v2/push/send",

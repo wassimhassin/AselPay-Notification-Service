@@ -9,8 +9,14 @@ const tokensRouter = require("./routes/tokens");
 const createApp = ({ config, queue, receipts, invalidTokens, logger }) => {
   const app = express();
   app.disable("x-powered-by");
+  if (config.trustProxy) app.set("trust proxy", config.trustProxy);
   app.use(requestLogger(logger));
   app.use(express.json({ limit: "1mb" }));
+
+  // Service info, so opening the base URL doesn't look like an error.
+  app.get("/", (req, res) => {
+    res.json({ service: "aselpay-notification-service", status: "ok", health: "/health" });
+  });
 
   // Open for monitoring; exposes counters only.
   app.get("/health", (req, res) => {
